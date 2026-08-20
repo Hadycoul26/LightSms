@@ -22,6 +22,7 @@
     <string name="app_settings">Paramètres de l\'application</string>
 
     <string name="sms_permission_required">Sans l\'autorisation SMS, l\'app ne peut pas fonctionner.</string>
+    <string name="settings_unavailable">Écran de réglages introuvable sur cet appareil.</string>
     <string name="torch_unavailable">Lampe indisponible (caméra occupée ou pas de flash).</string>
 
     <string name="warn_no_sms_permission">⚠ Autorisation SMS non accordée.</string>

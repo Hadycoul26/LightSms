@@ -96,9 +96,11 @@ class LightService : Service() {
         const val ACTION_STOP = "com.example.lightsms.action.STOP"
         const val ACTION_REFRESH = "com.example.lightsms.action.REFRESH"
 
+        // 'internal' et non 'private' : le setter doit rester joignable
+        // depuis onCreate()/onDestroy() de la classe englobante.
         @Volatile
         var isRunning: Boolean = false
-            private set
+            internal set
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(

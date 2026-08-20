@@ -1,6 +1,7 @@
 package com.example.lightsms
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -46,11 +47,11 @@ class MainActivity : AppCompatActivity() {
         binding.btnTestOff.setOnClickListener { testTorch(false) }
 
         binding.btnBattery.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
 
         binding.btnAppSettings.setOnClickListener {
-            startActivity(
+            openSettings(
                 Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.fromParts("package", packageName, null)
@@ -137,6 +138,15 @@ class MainActivity : AppCompatActivity() {
             warnings += getString(R.string.warn_no_flash)
         }
         return warnings.joinToString("\n")
+    }
+
+    /** Certaines surcouches ne fournissent pas l'ecran vise : on evite le crash. */
+    private fun openSettings(intent: Intent) {
+        try {
+            startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.settings_unavailable, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun hasPermission(permission: String) =
