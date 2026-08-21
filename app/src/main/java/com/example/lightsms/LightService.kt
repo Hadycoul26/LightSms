@@ -67,15 +67,17 @@ class LightService : Service() {
         when (intent?.action) {
             ACTION_STOP -> {
                 Prefs.setEnabled(this, false)
-                applyOnWorker(false, logResult = false)
+                applyOnWorker(Command.LIGHT_OFF, logResult = false)
                 worker.execute { stopSelfSafely() }
                 return START_NOT_STICKY
             }
 
             ACTION_APPLY -> {
-                val on = intent.getStringExtra(EXTRA_COMMAND) == Command.ON.name
-                // Un test manuel ne doit pas ecraser le resultat du dernier SMS.
-                applyOnWorker(on, logResult = intent.getBooleanExtra(EXTRA_LOG, true))
+                val command = parseCommand(intent.getStringExtra(EXTRA_COMMAND))
+                if (command != null) {
+                    // Un test manuel ne doit pas ecraser le resultat du dernier SMS.
+                    applyOnWorker(command, logResult = intent.getBooleanExtra(EXTRA_LOG, true))
+                }
             }
         }
 
@@ -95,10 +97,16 @@ class LightService : Service() {
 
     // --- Pilotage --------------------------------------------------------
 
-    /** Hors du thread principal : setTorch() peut attendre entre deux essais. */
-    private fun applyOnWorker(on: Boolean, logResult: Boolean) {
+    private fun parseCommand(name: String?): Command? = try {
+        if (name == null) null else Command.valueOf(name)
+    } catch (e: IllegalArgumentException) {
+        null
+    }
+
+    /** Hors du thread principal : le shell et la torche peuvent bloquer plusieurs secondes. */
+    private fun applyOnWorker(command: Command, logResult: Boolean) {
         worker.execute {
-            val result = TorchController.setTorch(this, on)
+            val result = CommandExecutor.execute(this, command)
 
             if (logResult) {
                 EventLog.updateLastResult(

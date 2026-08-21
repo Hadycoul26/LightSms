@@ -6,9 +6,6 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.util.Log
 
-/** Resultat d'une tentative d'allumage, avec le motif exact en cas d'echec. */
-data class TorchResult(val ok: Boolean, val detail: String)
-
 /**
  * Allume / eteint la lampe torche via CameraManager.
  *
@@ -27,13 +24,13 @@ object TorchController {
      * @param attempts la camera peut etre temporairement occupee par une autre
      *   app ; on reessaie plutot que d'abandonner au premier refus.
      */
-    fun setTorch(context: Context, on: Boolean, attempts: Int = 3): TorchResult {
+    fun setTorch(context: Context, on: Boolean, attempts: Int = 3): ActionResult {
         if (!hasFlash(context)) {
-            return TorchResult(false, "aucun flash sur cet appareil")
+            return ActionResult(false, "aucun flash sur cet appareil")
         }
 
         val manager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-            ?: return TorchResult(false, "CameraManager indisponible")
+            ?: return ActionResult(false, "CameraManager indisponible")
 
         val cameraId = try {
             manager.cameraIdList.firstOrNull { id ->
@@ -41,8 +38,8 @@ object TorchController {
                     .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             }
         } catch (e: Exception) {
-            return TorchResult(false, "liste des cameras illisible : " + describe(e))
-        } ?: return TorchResult(false, "aucune camera ne declare de flash")
+            return ActionResult(false, "liste des cameras illisible : " + describe(e))
+        } ?: return ActionResult(false, "aucune camera ne declare de flash")
 
         var lastError = "erreur inconnue"
 
@@ -50,7 +47,7 @@ object TorchController {
             try {
                 manager.setTorchMode(cameraId, on)
                 Prefs.setTorchOn(context, on)
-                return TorchResult(true, if (on) "lampe allumee" else "lampe eteinte")
+                return ActionResult(true, if (on) "lampe allumee" else "lampe eteinte")
             } catch (e: Exception) {
                 lastError = describe(e)
                 Log.w(TAG, "Tentative $attempt/$attempts echouee : $lastError")
@@ -59,13 +56,13 @@ object TorchController {
                         Thread.sleep(RETRY_DELAY_MS)
                     } catch (interrupted: InterruptedException) {
                         Thread.currentThread().interrupt()
-                        return TorchResult(false, lastError + " (interrompu)")
+                        return ActionResult(false, lastError + " (interrompu)")
                     }
                 }
             }
         }
 
-        return TorchResult(false, lastError + " (apres $attempts tentatives)")
+        return ActionResult(false, lastError + " (apres $attempts tentatives)")
     }
 
     private fun describe(e: Exception) =

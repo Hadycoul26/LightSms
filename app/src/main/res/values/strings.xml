@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Light SMS</string>
 
-    <string name="intro">Envoyez un SMS contenant « light on » pour allumer la lampe torche, ou « light off » pour l\'éteindre. L\'app écoute en arrière-plan et redémarre toute seule après un reboot.</string>
+    <string name="intro">Envoyez un SMS contenant une de ces commandes :\n\n• light on / light off — lampe torche\n• data on / data off — données mobiles\n• hotspot on / hotspot off — point d\'accès\n\nLes accents et la ponctuation sont ignorés. Données et point d\'accès exigent Shizuku ; la lampe fonctionne sans.</string>
 
     <string name="enable_listening">Écoute des SMS</string>
     <string name="status_listening">Actif — en écoute</string>
@@ -33,6 +33,10 @@
     <string name="action_stop">Arrêter</string>
 
     <string name="test_sent">Commande transmise au service. Appuyez sur Rafraîchir pour voir le résultat.</string>
+
+    <string name="shizuku_button">Autoriser Shizuku (données / point d\'accès)</string>
+    <string name="shizuku_ready">Shizuku est déjà prêt.</string>
+    <string name="shizuku_absent">Shizuku n\'est pas lancé. Ouvrez l\'app Shizuku et démarrez le service — à refaire après chaque redémarrage du téléphone.</string>
 
     <string name="debug_title">Diagnostic</string>
     <string name="log_title">5 derniers SMS reçus</string>

@@ -48,6 +48,22 @@ class MainActivity : AppCompatActivity() {
         binding.btnTestOff.setOnClickListener { testTorch(false) }
         binding.btnRefresh.setOnClickListener { refreshUi() }
 
+        binding.btnShizuku.setOnClickListener {
+            when (ShizukuShell.state()) {
+                ShizukuState.PRET ->
+                    Toast.makeText(this, R.string.shizuku_ready, Toast.LENGTH_LONG).show()
+
+                ShizukuState.NON_AUTORISE ->
+                    if (!ShizukuShell.requestPermission(SHIZUKU_REQUEST_CODE)) {
+                        Toast.makeText(this, R.string.shizuku_absent, Toast.LENGTH_LONG).show()
+                    }
+
+                ShizukuState.ABSENT ->
+                    Toast.makeText(this, R.string.shizuku_absent, Toast.LENGTH_LONG).show()
+            }
+            refreshUi()
+        }
+
         binding.btnClearLog.setOnClickListener {
             EventLog.clear(this)
             refreshUi()
@@ -112,7 +128,7 @@ class MainActivity : AppCompatActivity() {
      * qu'on vient de corriger cote SMS.
      */
     private fun testTorch(on: Boolean) {
-        val command = if (on) Command.ON else Command.OFF
+        val command = if (on) Command.LIGHT_ON else Command.LIGHT_OFF
 
         if (Prefs.isEnabled(this) && LightService.applyCommand(this, command, log = false)) {
             binding.txtLastEvent.setText(R.string.test_sent)
@@ -158,12 +174,20 @@ class MainActivity : AppCompatActivity() {
         val notifOk = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             hasPermission(Manifest.permission.POST_NOTIFICATIONS)
 
+        val shizuku = when (ShizukuShell.state()) {
+            ShizukuState.PRET -> "pret"
+            ShizukuState.NON_AUTORISE -> "lance, PERMISSION A ACCORDER"
+            ShizukuState.ABSENT -> "NON LANCE (a relancer apres chaque reboot)"
+        }
+
         return listOf(
+            "Android          : " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")",
             "Permission SMS   : " + yn(smsOk, "accordee", "REFUSEE"),
             "Notifications    : " + yn(notifOk, "accordees", "refusees"),
             "Ecoute activee   : " + yn(Prefs.isEnabled(this), "oui", "NON"),
             "Service actif    : " + yn(LightService.isRunning, "oui", "non"),
             "Flash disponible : " + yn(TorchController.hasFlash(this), "oui", "NON"),
+            "Shizuku          : " + shizuku,
             "SMS vus (max 5)  : " + EventLog.count(this)
         ).joinToString("\n")
     }
@@ -195,4 +219,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasPermission(permission: String) =
         ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+
+    private companion object {
+        const val SHIZUKU_REQUEST_CODE = 42
+    }
 }

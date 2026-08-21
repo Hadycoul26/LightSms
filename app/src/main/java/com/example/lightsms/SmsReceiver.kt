@@ -62,7 +62,7 @@ class SmsReceiver : BroadcastReceiver() {
             if (!LightService.applyCommand(context, command)) {
                 // Repli : le systeme a refuse le service de premier plan. On agit
                 // directement, en sachant qu'un allumage risque de ne pas tenir.
-                val result = TorchController.setTorch(context, command == Command.ON)
+                val result = CommandExecutor.execute(context, command)
                 EventLog.updateLastResult(
                     context,
                     if (result.ok) "repli direct - " + result.detail

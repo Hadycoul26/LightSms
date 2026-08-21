@@ -87,6 +87,14 @@
                 android:text="@string/test_off" />
         </LinearLayout>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnShizuku"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/shizuku_button" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
