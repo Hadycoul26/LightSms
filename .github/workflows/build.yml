@@ -35,6 +35,11 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      # Echoue en quelques secondes avec un message clair, plutot que d'attendre
+      # que aapt2 se plaigne d'une "invalid unicode escape sequence".
+      - name: Verifications statiques
+        run: python tools/check_resources.py
+
       - name: Build de l'APK debug
         run: gradle assembleDebug --no-daemon --stacktrace
 
