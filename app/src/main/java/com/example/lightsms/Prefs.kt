@@ -28,4 +28,46 @@ object Prefs {
 
     fun setLastEvent(context: Context, value: String) =
         sp(context).edit().putString(KEY_LAST_EVENT, value).apply()
+
+    // --- Serveur web ------------------------------------------------------
+
+    /** true = le serveur HTTP local est actif. */
+    fun isWebEnabled(context: Context) = sp(context).getBoolean(KEY_WEB_ENABLED, false)
+
+    fun setWebEnabled(context: Context, value: Boolean) =
+        sp(context).edit().putBoolean(KEY_WEB_ENABLED, value).apply()
+
+    fun webPort(context: Context) = sp(context).getInt(KEY_WEB_PORT, DEFAULT_WEB_PORT)
+
+    /**
+     * Cle d'acces au serveur, generee au premier usage.
+     *
+     * Toute personne connectee au point d'acces peut joindre le serveur : sans
+     * cle, elle pourrait couper la connexion du telephone. Ce n'est pas de la
+     * cryptographie, juste de quoi empecher un acces par accident ou par
+     * curiosite sur un reseau qu'on ne maitrise pas entierement.
+     */
+    fun webToken(context: Context): String {
+        sp(context).getString(KEY_WEB_TOKEN, null)?.let { return it }
+
+        val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        val random = java.security.SecureRandom()
+        val token = (1..6).map { alphabet[random.nextInt(alphabet.length)] }.joinToString("")
+
+        sp(context).edit().putString(KEY_WEB_TOKEN, token).apply()
+        return token
+    }
+
+    fun regenerateWebToken(context: Context): String {
+        sp(context).edit().remove(KEY_WEB_TOKEN).apply()
+        return webToken(context)
+    }
+
+    fun isTokenValid(context: Context, candidate: String?): Boolean =
+        candidate != null && candidate.equals(webToken(context), ignoreCase = true)
+
+    private const val KEY_WEB_ENABLED = "web_enabled"
+    private const val KEY_WEB_TOKEN = "web_token"
+    private const val KEY_WEB_PORT = "web_port"
+    const val DEFAULT_WEB_PORT = 8080
 }

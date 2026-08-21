@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- Notification persistante (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Necessaire meme pour un simple ServerSocket local. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Shizuku : privileges shell pour les donnees mobiles et le point d'acces -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 

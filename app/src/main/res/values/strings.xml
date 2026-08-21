@@ -38,6 +38,13 @@
     <string name="shizuku_ready">Shizuku est déjà prêt.</string>
     <string name="shizuku_absent">Shizuku n\'est pas lancé. Ouvrez l\'app Shizuku et démarrez le service — à refaire après chaque redémarrage du téléphone.</string>
 
+    <string name="web_enable">Pilotage web (via le point d\'accès)</string>
+    <string name="web_hint">Depuis un appareil connecté au point d\'accès de ce téléphone, ouvrez cette adresse dans un navigateur. Le serveur ne peut pas allumer le point d\'accès — pour ça, seul le SMS fonctionne.</string>
+    <string name="web_new_key">Générer une nouvelle clé</string>
+    <string name="web_off">Serveur arrêté.</string>
+    <string name="web_no_address">Serveur actif, mais aucune adresse réseau détectée. Le point d\'accès est-il allumé ?</string>
+    <string name="web_needs_listening">Activez d\'abord l\'écoute des SMS : le serveur web est hébergé par le même service.</string>
+
     <string name="debug_title">Diagnostic</string>
     <string name="log_title">5 derniers SMS reçus</string>
     <string name="log_empty">Aucun SMS reçu depuis l\'installation.\n\nCe journal enregistre TOUS les SMS, même ceux sans commande. S\'il reste vide après un envoi, le message n\'est jamais arrivé jusqu\'à l\'app.</string>

@@ -48,6 +48,23 @@ class MainActivity : AppCompatActivity() {
         binding.btnTestOff.setOnClickListener { testTorch(false) }
         binding.btnRefresh.setOnClickListener { refreshUi() }
 
+        binding.switchWeb.setOnClickListener {
+            // Le serveur vit dans LightService : sans lui, rien a heberger.
+            if (binding.switchWeb.isChecked && !Prefs.isEnabled(this)) {
+                binding.switchWeb.isChecked = false
+                Toast.makeText(this, R.string.web_needs_listening, Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            Prefs.setWebEnabled(this, binding.switchWeb.isChecked)
+            LightService.start(this)
+            refreshUi()
+        }
+
+        binding.btnNewKey.setOnClickListener {
+            Prefs.regenerateWebToken(this)
+            refreshUi()
+        }
+
         binding.btnShizuku.setOnClickListener {
             when (ShizukuShell.state()) {
                 ShizukuState.PRET ->
@@ -163,10 +180,28 @@ class MainActivity : AppCompatActivity() {
         binding.txtWarnings.visibility =
             if (binding.txtWarnings.text.isNullOrBlank()) View.GONE else View.VISIBLE
 
+        binding.switchWeb.isChecked = Prefs.isWebEnabled(this)
+        binding.txtWebInfo.text = buildWebInfo()
+
         binding.txtDiag.text = buildDiagnostics()
 
         val log = EventLog.format(this)
         binding.txtLog.text = if (log.isBlank()) getString(R.string.log_empty) else log
+    }
+
+    private fun buildWebInfo(): String {
+        if (!Prefs.isWebEnabled(this)) return getString(R.string.web_off)
+
+        LightService.webServerError?.let { return "Serveur en echec : $it" }
+
+        val addresses = LocalAddresses.list()
+        if (addresses.isEmpty()) return getString(R.string.web_no_address)
+
+        val port = Prefs.webPort(this)
+        val token = Prefs.webToken(this)
+
+        return addresses.joinToString("\n") { "http://$it:$port/?k=$token" } +
+            "\n\nClé : $token"
     }
 
     private fun buildDiagnostics(): String {

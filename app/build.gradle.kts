@@ -49,4 +49,7 @@ dependencies {
     // dont les API sont reservees aux apps systeme.
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+
+    // Serveur HTTP embarque pour le pilotage depuis le point d'acces.
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
 }

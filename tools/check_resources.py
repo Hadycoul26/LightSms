@@ -109,7 +109,9 @@ def check_references():
             problems.append('.%s declaree au manifest mais aucune classe correspondante' % cls)
 
     for path, source in sources.items():
-        body = re.sub(r'"[^"\n]*"', '""', re.sub(r'//.*', '', source))
+        # Les chaines d'abord : sinon un "http://..." fait passer la fin de la
+        # ligne pour un commentaire et les accolades semblent desequilibrees.
+        body = re.sub(r'//.*', '', re.sub(r'"[^"\n]*"', '""', source))
         if body.count('{') != body.count('}'):
             problems.append('%s : accolades desequilibrees' % path)
         for imported in re.findall(r'^import .*\.(\w+)$', source, re.M):

@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraManager
 import android.os.IBinder
+import fi.iki.elonen.NanoHTTPD
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import java.util.concurrent.Executors
@@ -28,6 +29,8 @@ class LightService : Service() {
     private val worker = Executors.newSingleThreadExecutor()
 
     private var cameraManager: CameraManager? = null
+
+    private var webServer: WebServer? = null
 
     /** Le systeme peut eteindre la torche sans nous prevenir : on l'apprend ici. */
     private val torchCallback = object : CameraManager.TorchCallback() {
@@ -58,11 +61,45 @@ class LightService : Service() {
                 // Sans callback on perd le suivi d'etat, pas le pilotage.
             }
         }
+
+        reconcileWebServer()
+    }
+
+    // --- Serveur web -----------------------------------------------------
+
+    /** Aligne l'etat reel du serveur sur la preference, dans les deux sens. */
+    private fun reconcileWebServer() {
+        val shouldRun = Prefs.isWebEnabled(this)
+        if (shouldRun == (webServer != null)) return
+
+        if (shouldRun) {
+            try {
+                webServer = WebServer(this, Prefs.webPort(this)).apply {
+                    start(NanoHTTPD.SOCKET_READ_TIMEOUT, true)
+                }
+                webServerError = null
+            } catch (e: Exception) {
+                webServer = null
+                webServerError = e.javaClass.simpleName + " : " + (e.message ?: "port occupe ?")
+            }
+        } else {
+            try {
+                webServer?.stop()
+            } catch (e: Exception) {
+                // Le serveur part de toute facon.
+            }
+            webServer = null
+            webServerError = null
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Obligatoire dans les 5 s suivant startForegroundService(), avant tout le reste.
         startForeground(NOTIF_ID, buildNotification())
+
+        // L'activite change la preference puis relance le service : c'est ici
+        // que le serveur demarre ou s'arrete reellement.
+        reconcileWebServer()
 
         when (intent?.action) {
             ACTION_STOP -> {
@@ -91,6 +128,12 @@ class LightService : Service() {
         } catch (e: Exception) {
             // Rien a faire : on part de toute facon.
         }
+        try {
+            webServer?.stop()
+        } catch (e: Exception) {
+            // Idem.
+        }
+        webServer = null
         worker.shutdown()
         super.onDestroy()
     }
@@ -198,6 +241,11 @@ class LightService : Service() {
 
         @Volatile
         var isRunning: Boolean = false
+            internal set
+
+        /** Motif du dernier echec de demarrage du serveur, pour l'afficher. */
+        @Volatile
+        var webServerError: String? = null
             internal set
 
         fun start(context: Context) {
