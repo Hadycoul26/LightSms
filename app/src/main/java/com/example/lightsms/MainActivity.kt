@@ -106,7 +106,19 @@ class MainActivity : AppCompatActivity() {
         refreshUi()
     }
 
+    /**
+     * On passe par le service quand il est disponible : sinon la lampe
+     * s'eteindrait des la fermeture de l'activite, exactement comme le bug
+     * qu'on vient de corriger cote SMS.
+     */
     private fun testTorch(on: Boolean) {
+        val command = if (on) Command.ON else Command.OFF
+
+        if (Prefs.isEnabled(this) && LightService.applyCommand(this, command, log = false)) {
+            binding.txtLastEvent.setText(R.string.test_sent)
+            return
+        }
+
         val result = TorchController.setTorch(this, on)
         if (!result.ok) {
             Toast.makeText(this, result.detail, Toast.LENGTH_LONG).show()

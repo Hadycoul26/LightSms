@@ -11,13 +11,23 @@ data class TorchResult(val ok: Boolean, val detail: String)
 
 /**
  * Allume / eteint la lampe torche via CameraManager.
- * Aucune permission runtime necessaire depuis Android 6 pour setTorchMode().
+ *
+ * ATTENTION : la doc Android precise que "if the latest application that turned
+ * on the torch mode exits, the torch mode will be turned off". Appeler ceci
+ * depuis un BroadcastReceiver reveille a froid ne sert donc a rien pour un
+ * allumage : le processus meurt des la fin de onReceive et la lampe avec lui.
+ * L'appelant doit etre [LightService], dont le processus reste vivant.
  */
 object TorchController {
 
     private const val TAG = "TorchController"
+    private const val RETRY_DELAY_MS = 250L
 
-    fun setTorch(context: Context, on: Boolean): TorchResult {
+    /**
+     * @param attempts la camera peut etre temporairement occupee par une autre
+     *   app ; on reessaie plutot que d'abandonner au premier refus.
+     */
+    fun setTorch(context: Context, on: Boolean, attempts: Int = 3): TorchResult {
         if (!hasFlash(context)) {
             return TorchResult(false, "aucun flash sur cet appareil")
         }
@@ -25,21 +35,41 @@ object TorchController {
         val manager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
             ?: return TorchResult(false, "CameraManager indisponible")
 
-        return try {
-            val cameraId = manager.cameraIdList.firstOrNull { id ->
+        val cameraId = try {
+            manager.cameraIdList.firstOrNull { id ->
                 manager.getCameraCharacteristics(id)
                     .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-            } ?: return TorchResult(false, "aucune camera ne declare de flash")
-
-            manager.setTorchMode(cameraId, on)
-            Prefs.setTorchOn(context, on)
-            TorchResult(true, if (on) "lampe allumee" else "lampe eteinte")
+            }
         } catch (e: Exception) {
-            // CameraAccessException typiquement : camera occupee par une autre app.
-            Log.e(TAG, "Changement d'etat de la lampe impossible", e)
-            TorchResult(false, e.javaClass.simpleName + " : " + (e.message ?: "sans message"))
+            return TorchResult(false, "liste des cameras illisible : " + describe(e))
+        } ?: return TorchResult(false, "aucune camera ne declare de flash")
+
+        var lastError = "erreur inconnue"
+
+        for (attempt in 1..attempts) {
+            try {
+                manager.setTorchMode(cameraId, on)
+                Prefs.setTorchOn(context, on)
+                return TorchResult(true, if (on) "lampe allumee" else "lampe eteinte")
+            } catch (e: Exception) {
+                lastError = describe(e)
+                Log.w(TAG, "Tentative $attempt/$attempts echouee : $lastError")
+                if (attempt < attempts) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS)
+                    } catch (interrupted: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        return TorchResult(false, lastError + " (interrompu)")
+                    }
+                }
+            }
         }
+
+        return TorchResult(false, lastError + " (apres $attempts tentatives)")
     }
+
+    private fun describe(e: Exception) =
+        e.javaClass.simpleName + " : " + (e.message ?: "sans message")
 
     fun hasFlash(context: Context): Boolean =
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)

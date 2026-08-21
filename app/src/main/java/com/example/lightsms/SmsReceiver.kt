@@ -7,8 +7,12 @@ import android.provider.Telephony
 import android.util.Log
 
 /**
- * Recoit les SMS entrants et applique la commande trouvee dans le texte.
- * Declare dans le manifest : Android le reveille meme si l'app est fermee.
+ * Recoit les SMS entrants et transmet la commande a [LightService].
+ *
+ * Ce recepteur ne pilote PAS la lampe lui-meme : Android tue le processus
+ * quasi immediatement apres onReceive quand il a ete reveille a froid, et le
+ * systeme eteint la torche avec le processus qui l'avait allumee. Le service
+ * de premier plan, lui, survit.
  *
  * Chaque SMS vu est journalise dans [EventLog], commande reconnue ou non.
  */
@@ -29,7 +33,7 @@ class SmsReceiver : BroadcastReceiver() {
         val normalized = CommandParser.normalize(body)
         val command = CommandParser.parse(body)
 
-        Log.i(TAG, "SMS de $sender -> normalise=\"$normalized\" commande=$command")
+        Log.i(TAG, "SMS de $sender -> normalise=[$normalized] commande=$command")
 
         if (!Prefs.isEnabled(context)) {
             EventLog.add(
@@ -43,25 +47,33 @@ class SmsReceiver : BroadcastReceiver() {
         if (command == null) {
             EventLog.add(
                 context, sender, body, normalized, "aucune",
-                "aucune commande reconnue (attendu : \"light on\" ou \"light off\")"
+                "aucune commande reconnue (attendu : light on / light off)"
             )
             return
         }
 
-        val result = TorchController.setTorch(context, command == Command.ON)
+        // Entree posee maintenant ; le service completera le resultat reel.
+        EventLog.add(context, sender, body, normalized, command.name, "transmis au service...")
 
-        EventLog.add(
-            context, sender, body, normalized, command.name,
-            if (result.ok) "OK - " + result.detail else "ECHEC - " + result.detail
-        )
-
-        Prefs.setLastEvent(
-            context,
-            if (result.ok) result.detail.replaceFirstChar { it.uppercase() } + " (SMS de $sender)"
-            else "Echec : " + result.detail + " (SMS de $sender)"
-        )
-
-        LightService.refresh(context)
+        // goAsync() empeche Android de tuer le processus avant que le service
+        // ait eu le temps de demarrer et de prendre la main sur la lampe.
+        val pending = goAsync()
+        try {
+            if (!LightService.applyCommand(context, command)) {
+                // Repli : le systeme a refuse le service de premier plan. On agit
+                // directement, en sachant qu'un allumage risque de ne pas tenir.
+                val result = TorchController.setTorch(context, command == Command.ON)
+                EventLog.updateLastResult(
+                    context,
+                    if (result.ok) "repli direct - " + result.detail
+                    else "ECHEC (repli) - " + result.detail
+                )
+            }
+        } catch (e: Exception) {
+            EventLog.updateLastResult(context, "ECHEC - " + e.javaClass.simpleName)
+        } finally {
+            pending.finish()
+        }
     }
 
     private companion object {

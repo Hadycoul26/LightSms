@@ -54,6 +54,22 @@ object EventLog {
         }
     }
 
+    /**
+     * Remplace le champ resultat de l'entree la plus recente. Le recepteur pose
+     * l'entree des reception ; le service, qui applique reellement la commande,
+     * vient ecrire ce qui s'est passe.
+     */
+    fun updateLastResult(context: Context, result: String) {
+        try {
+            val events = read(context)
+            if (events.length() == 0) return
+            events.getJSONObject(0).put("res", result)
+            sp(context).edit().putString(KEY, events.toString()).apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Mise a jour du journal impossible", e)
+        }
+    }
+
     private fun read(context: Context): JSONArray = try {
         JSONArray(sp(context).getString(KEY, "[]"))
     } catch (e: Exception) {

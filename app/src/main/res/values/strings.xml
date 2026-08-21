@@ -32,6 +32,8 @@
     <string name="notif_title">Light SMS actif — lampe %1$s</string>
     <string name="action_stop">Arrêter</string>
 
+    <string name="test_sent">Commande transmise au service. Appuyez sur Rafraîchir pour voir le résultat.</string>
+
     <string name="debug_title">Diagnostic</string>
     <string name="log_title">5 derniers SMS reçus</string>
     <string name="log_empty">Aucun SMS reçu depuis l\'installation.\n\nCe journal enregistre TOUS les SMS, même ceux sans commande. S\'il reste vide après un envoi, le message n\'est jamais arrivé jusqu\'à l\'app.</string>
