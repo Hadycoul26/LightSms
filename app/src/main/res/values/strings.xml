@@ -23,7 +23,6 @@
 
     <string name="sms_permission_required">Sans l\'autorisation SMS, l\'app ne peut pas fonctionner.</string>
     <string name="settings_unavailable">Écran de réglages introuvable sur cet appareil.</string>
-    <string name="torch_unavailable">Lampe indisponible (caméra occupée ou pas de flash).</string>
 
     <string name="warn_no_sms_permission">⚠ Autorisation SMS non accordée.</string>
     <string name="warn_no_flash">⚠ Cet appareil n\'a pas de flash.</string>
@@ -32,4 +31,12 @@
     <string name="channel_description">Notification permanente indiquant que l\'app écoute les SMS.</string>
     <string name="notif_title">Light SMS actif — lampe %1$s</string>
     <string name="action_stop">Arrêter</string>
+    <string name="debug_title">Diagnostic</string>
+    <string name="log_title">5 derniers SMS reçus</string>
+    <string name="log_empty">Aucun SMS reçu depuis l'installation.
+
+Ce journal enregistre TOUS les SMS, même ceux sans commande. S'il reste vide après un envoi, le message n'est jamais arrivé jusqu'à l'app.</string>
+    <string name="refresh">Rafraîchir</string>
+    <string name="clear_log">Vider le journal</string>
+    <string name="warn_no_sms_seen">⚠ Écoute active mais aucun SMS reçu pour l'instant. Si tu viens d'en envoyer un : il est probablement parti en RCS (chat Google Messages) et non en SMS classique — or seul un vrai SMS déclenche l'app.</string>
 </resources>

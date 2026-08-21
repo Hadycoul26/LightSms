@@ -9,33 +9,58 @@ import android.util.Log
 /**
  * Recoit les SMS entrants et applique la commande trouvee dans le texte.
  * Declare dans le manifest : Android le reveille meme si l'app est fermee.
+ *
+ * Chaque SMS vu est journalise dans [EventLog], commande reconnue ou non.
  */
 class SmsReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-        if (!Prefs.isEnabled(context)) return
 
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-        if (messages.isNullOrEmpty()) return
+        if (messages.isNullOrEmpty()) {
+            EventLog.add(context, "?", "", "", "-", "aucun message extrait de l'intent")
+            return
+        }
 
         // Un SMS long arrive en plusieurs morceaux : on recolle le tout.
         val body = messages.joinToString("") { it.displayMessageBody.orEmpty() }
         val sender = messages.first().displayOriginatingAddress ?: "inconnu"
+        val normalized = CommandParser.normalize(body)
+        val command = CommandParser.parse(body)
 
-        val command = CommandParser.parse(body) ?: return
-        Log.i(TAG, "Commande $command recue de $sender")
+        Log.i(TAG, "SMS de $sender -> normalise=\"$normalized\" commande=$command")
 
-        val ok = TorchController.setTorch(context, command == Command.ON)
+        if (!Prefs.isEnabled(context)) {
+            EventLog.add(
+                context, sender, body, normalized,
+                command?.name ?: "aucune",
+                "ignore : l'ecoute est desactivee dans l'app"
+            )
+            return
+        }
 
-        val label = if (command == Command.ON) "allumee" else "eteinte"
-        Prefs.setLastEvent(
-            context,
-            if (ok) "Lampe $label (SMS de $sender)"
-            else "Echec : lampe indisponible (SMS de $sender)"
+        if (command == null) {
+            EventLog.add(
+                context, sender, body, normalized, "aucune",
+                "aucune commande reconnue (attendu : \"light on\" ou \"light off\")"
+            )
+            return
+        }
+
+        val result = TorchController.setTorch(context, command == Command.ON)
+
+        EventLog.add(
+            context, sender, body, normalized, command.name,
+            if (result.ok) "OK - " + result.detail else "ECHEC - " + result.detail
         )
 
-        // Rafraichit la notification si le service tourne.
+        Prefs.setLastEvent(
+            context,
+            if (result.ok) result.detail.replaceFirstChar { it.uppercase() } + " (SMS de $sender)"
+            else "Echec : " + result.detail + " (SMS de $sender)"
+        )
+
         LightService.refresh(context)
     }
 

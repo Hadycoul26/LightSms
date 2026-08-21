@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -45,6 +46,12 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnTestOn.setOnClickListener { testTorch(true) }
         binding.btnTestOff.setOnClickListener { testTorch(false) }
+        binding.btnRefresh.setOnClickListener { refreshUi() }
+
+        binding.btnClearLog.setOnClickListener {
+            EventLog.clear(this)
+            refreshUi()
+        }
 
         binding.btnBattery.setOnClickListener {
             openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
@@ -100,8 +107,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun testTorch(on: Boolean) {
-        if (!TorchController.setTorch(this, on)) {
-            Toast.makeText(this, R.string.torch_unavailable, Toast.LENGTH_LONG).show()
+        val result = TorchController.setTorch(this, on)
+        if (!result.ok) {
+            Toast.makeText(this, result.detail, Toast.LENGTH_LONG).show()
         }
         refreshUi()
     }
@@ -125,9 +133,30 @@ class MainActivity : AppCompatActivity() {
 
         binding.txtWarnings.text = buildWarnings()
         binding.txtWarnings.visibility =
-            if (binding.txtWarnings.text.isNullOrBlank()) android.view.View.GONE
-            else android.view.View.VISIBLE
+            if (binding.txtWarnings.text.isNullOrBlank()) View.GONE else View.VISIBLE
+
+        binding.txtDiag.text = buildDiagnostics()
+
+        val log = EventLog.format(this)
+        binding.txtLog.text = if (log.isBlank()) getString(R.string.log_empty) else log
     }
+
+    private fun buildDiagnostics(): String {
+        val smsOk = hasPermission(Manifest.permission.RECEIVE_SMS)
+        val notifOk = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            hasPermission(Manifest.permission.POST_NOTIFICATIONS)
+
+        return listOf(
+            "Permission SMS   : " + yn(smsOk, "accordee", "REFUSEE"),
+            "Notifications    : " + yn(notifOk, "accordees", "refusees"),
+            "Ecoute activee   : " + yn(Prefs.isEnabled(this), "oui", "NON"),
+            "Service actif    : " + yn(LightService.isRunning, "oui", "non"),
+            "Flash disponible : " + yn(TorchController.hasFlash(this), "oui", "NON"),
+            "SMS vus (max 5)  : " + EventLog.count(this)
+        ).joinToString("\n")
+    }
+
+    private fun yn(value: Boolean, yes: String, no: String) = if (value) yes else no
 
     private fun buildWarnings(): String {
         val warnings = mutableListOf<String>()
@@ -137,7 +166,10 @@ class MainActivity : AppCompatActivity() {
         if (!TorchController.hasFlash(this)) {
             warnings += getString(R.string.warn_no_flash)
         }
-        return warnings.joinToString("\n")
+        if (Prefs.isEnabled(this) && EventLog.count(this) == 0) {
+            warnings += getString(R.string.warn_no_sms_seen)
+        }
+        return warnings.joinToString("\n\n")
     }
 
     /** Certaines surcouches ne fournissent pas l'ecran vise : on evite le crash. */

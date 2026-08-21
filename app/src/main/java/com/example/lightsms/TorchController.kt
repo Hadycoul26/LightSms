@@ -1,9 +1,13 @@
 package com.example.lightsms
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.util.Log
+
+/** Resultat d'une tentative d'allumage, avec le motif exact en cas d'echec. */
+data class TorchResult(val ok: Boolean, val detail: String)
 
 /**
  * Allume / eteint la lampe torche via CameraManager.
@@ -13,32 +17,30 @@ object TorchController {
 
     private const val TAG = "TorchController"
 
-    /** @return true si la commande est passee. */
-    fun setTorch(context: Context, on: Boolean): Boolean {
+    fun setTorch(context: Context, on: Boolean): TorchResult {
+        if (!hasFlash(context)) {
+            return TorchResult(false, "aucun flash sur cet appareil")
+        }
+
         val manager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-            ?: return false
+            ?: return TorchResult(false, "CameraManager indisponible")
 
         return try {
             val cameraId = manager.cameraIdList.firstOrNull { id ->
                 manager.getCameraCharacteristics(id)
                     .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-            }
-
-            if (cameraId == null) {
-                Log.w(TAG, "Aucune camera avec flash sur cet appareil")
-                return false
-            }
+            } ?: return TorchResult(false, "aucune camera ne declare de flash")
 
             manager.setTorchMode(cameraId, on)
             Prefs.setTorchOn(context, on)
-            true
+            TorchResult(true, if (on) "lampe allumee" else "lampe eteinte")
         } catch (e: Exception) {
-            // Typiquement CameraAccessException si la camera est occupee par une autre app.
-            Log.e(TAG, "Impossible de changer l'etat de la lampe", e)
-            false
+            // CameraAccessException typiquement : camera occupee par une autre app.
+            Log.e(TAG, "Changement d'etat de la lampe impossible", e)
+            TorchResult(false, e.javaClass.simpleName + " : " + (e.message ?: "sans message"))
         }
     }
 
     fun hasFlash(context: Context): Boolean =
-        context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_FLASH)
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)
 }

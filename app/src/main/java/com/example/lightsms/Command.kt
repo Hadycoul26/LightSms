@@ -6,15 +6,19 @@ enum class Command { ON, OFF }
 object CommandParser {
 
     /**
-     * Normalise le texte (minuscules, ponctuation -> espace) puis cherche la commande.
-     * Accepte donc "Light ON!", "light-off", "LIGHT   On", etc.
+     * Minuscules, puis toute suite de caracteres non alphanumeriques devient un
+     * espace unique. "Light ON!", "light-off", "LIGHT   On" convergent ainsi
+     * vers "light on" / "light off".
      */
-    fun parse(raw: String?): Command? {
-        if (raw.isNullOrBlank()) return null
-        val text = raw.lowercase()
+    fun normalize(raw: String?): String {
+        if (raw.isNullOrBlank()) return ""
+        return raw.lowercase()
             .replace(Regex("[^a-z0-9]+"), " ")
             .trim()
+    }
 
+    fun parse(raw: String?): Command? {
+        val text = normalize(raw)
         return when {
             text.contains("light off") -> Command.OFF
             text.contains("light on") -> Command.ON
